@@ -30,7 +30,8 @@ require('packer').startup(function(use)
 
   use { -- Autocompletion
     'hrsh7th/nvim-cmp',
-    requires = { 'hrsh7th/cmp-nvim-lsp', 'L3MON4D3/LuaSnip', 'saadparwaiz1/cmp_luasnip' },
+    requires = { 'hrsh7th/cmp-nvim-lsp', 'L3MON4D3/LuaSnip', 'saadparwaiz1/cmp_luasnip',
+      'hrsh7th/cmp-nvim-lsp-signature-help' },
   }
 
   use { -- Highlight, edit, and navigate code
@@ -45,12 +46,24 @@ require('packer').startup(function(use)
     after = 'nvim-treesitter',
   }
 
+  use {
+    'nvim-tree/nvim-tree.lua',
+    requires = {
+      'nvim-tree/nvim-web-devicons', -- optional, for file icons
+    },
+    tag = 'nightly' -- optional, updated every week. (see issue #1193)
+  }
+
   -- Git related plugins
   use 'tpope/vim-fugitive'
   use 'tpope/vim-rhubarb'
   use 'lewis6991/gitsigns.nvim'
 
   use 'ntpeters/vim-better-whitespace'
+
+  use { 'akinsho/bufferline.nvim', tag = "v3.*", requires = 'nvim-tree/nvim-web-devicons' }
+
+  use 'windwp/nvim-autopairs'
 
 
   use 'navarasu/onedark.nvim' -- Theme inspired by Atom
@@ -97,6 +110,11 @@ vim.api.nvim_create_autocmd('BufWritePost', {
   pattern = vim.fn.expand '$MYVIMRC',
 })
 
+vim.g.loaded_netrw = 1
+vim.g.loaded_netrwPlugin = 1
+
+require("nvim-tree").setup()
+
 -- [[ Setting options ]]
 -- See `:help vim.o`
 
@@ -119,6 +137,10 @@ vim.o.undofile = true
 -- Case insensitive searching UNLESS /C or capital in search
 vim.o.ignorecase = true
 vim.o.smartcase = true
+
+vim.opt.foldenable = false
+vim.wo.foldmethod = 'expr'
+vim.wo.foldexpr = 'nvim_treesitter#foldexpr()'
 
 -- Decrease update time
 vim.o.updatetime = 250
@@ -146,11 +168,7 @@ vim.keymap.set({ 'n', 'v' }, '<Space>', '<Nop>', { silent = true })
 vim.keymap.set('n', 'k', "v:count == 0 ? 'gk' : 'k'", { expr = true, silent = true })
 vim.keymap.set('n', 'j', "v:count == 0 ? 'gj' : 'j'", { expr = true, silent = true })
 
-
--- require('onedark').setup {
---     style = 'cool'
--- }
--- require('onedark').load()
+require('bufferline').setup {}
 
 -- [[ Highlight on yank ]]
 -- See `:help vim.highlight.on_yank()`
@@ -172,6 +190,14 @@ require('lualine').setup {
     component_separators = '|',
     section_separators = '',
   },
+  -- tabline = {
+  -- lualine_a = {},
+  -- lualine_b = {'branch'},
+  -- lualine_c = {'filename'},
+  -- lualine_x = {},
+  -- lualine_y = {},
+  -- lualine_z = {'tabs'}
+  -- }
 }
 
 -- Enable Comment.nvim
@@ -292,7 +318,7 @@ require('nvim-treesitter.configs').setup {
   },
 }
 
-vim.keymap.set('i', '{', '{}<Esc>ha')
+-- vim.keymap.set('i', '{', '{}<Esc>ha')
 
 -- Diagnostic keymaps
 vim.keymap.set('n', '[d', vim.diagnostic.goto_prev)
@@ -373,37 +399,67 @@ local capabilities = vim.lsp.protocol.make_client_capabilities()
 capabilities = require('cmp_nvim_lsp').default_capabilities(capabilities)
 
 -- Setup mason so it can manage external tooling
--- require('mason').setup()
+require('mason').setup()
 
 -- Ensure the servers above are installed
--- local mason_lspconfig = require 'mason-lspconfig'
+local mason_lspconfig = require 'mason-lspconfig'
 
--- mason_lspconfig.setup {
---   ensure_installed = vim.tbl_keys(servers),
--- }
+mason_lspconfig.setup {
+  ensure_installed = vim.tbl_keys(servers),
+}
 
--- mason_lspconfig.setup_handlers {
---   function(server_name)
---     require('lspconfig')[server_name].setup {
---       capabilities = capabilities,
---       on_attach = on_attach,
---       settings = servers[server_name],
---     }
---   end,
--- }
+mason_lspconfig.setup_handlers {
+  function(server_name)
+    require('lspconfig')[server_name].setup {
+      capabilities = capabilities,
+      on_attach = on_attach,
+      settings = servers[server_name],
+    }
+  end,
+}
 require 'rust-tools'.setup({
-	server = {
-		capabilities = capabilities,
-		on_attach = on_attach
-	}
+  server = {
+    capabilities = capabilities,
+    on_attach = on_attach
+  }
 })
 
 -- Turn on lsp status information
 require('fidget').setup()
 
+
+local npairs = require("nvim-autopairs")
+local Rule = require('nvim-autopairs.rule')
+
+npairs.setup({
+  check_ts = true,
+  ts_config = {
+    lua = { 'string' }, -- it will not add a pair on that treesitter node
+    javascript = { 'template_string' },
+    java = false, -- don't check treesitter on java
+  }
+})
+
+local ts_conds = require('nvim-autopairs.ts-conds')
+
+
+-- press % => %% only while inside a comment or string
+npairs.add_rules({
+  Rule("%", "%", "lua")
+      :with_pair(ts_conds.is_ts_node({ 'string', 'comment' })),
+  Rule("$", "$", "lua")
+      :with_pair(ts_conds.is_not_ts_node({ 'function' }))
+})
+
 -- nvim-cmp setup
 local cmp = require 'cmp'
 local luasnip = require 'luasnip'
+local cmp_autopairs = require('nvim-autopairs.completion.cmp')
+
+cmp.event:on(
+  'confirm_done',
+  cmp_autopairs.on_confirm_done()
+)
 
 cmp.setup {
   snippet = {
@@ -438,9 +494,14 @@ cmp.setup {
       end
     end, { 'i', 's' }),
   },
+  window = {
+    completion = cmp.config.window.bordered(),
+    documentation = cmp.config.window.bordered(),
+  },
   sources = {
     { name = 'nvim_lsp' },
     { name = 'luasnip' },
+    { name = 'nvim_lsp_signature_help' },
   },
 }
 
