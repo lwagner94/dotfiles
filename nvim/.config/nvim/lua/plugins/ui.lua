@@ -4,22 +4,31 @@ return {
   { 
     "catppuccin/nvim",
     name = "catppuccin",
+    priority = 1000,
+    lazy = false,
     config = function()
-      vim.cmd.colorscheme "catppuccin-macchiato"
+      vim.cmd([[colorscheme catppuccin-macchiato]])
     end,
-    opts = {
-      transparent_background = true,
-      dim_inactive = {
-        enabled = true,
-        shade = "dark",
-        percentage = 0.15,
-      },
-    }
+    -- opts = {
+    --   transparent_background = true,
+    --   dim_inactive = {
+    --     enabled = true,
+    --     shade = "dark",
+    --     percentage = 0.15,
+    --   },
+    -- }
   },
   {
     "nvim-lualine/lualine.nvim",
     event = "VeryLazy",
-    config = true
+    config = true,
+    opts = {
+      extensions = { "neo-tree" }
+    }
+  },
+  {
+    "lukas-reineke/indent-blankline.nvim",
+    config = true,
   },
   { "nvim-tree/nvim-web-devicons", lazy = true },
   {
@@ -55,8 +64,12 @@ return {
     "rcarriga/nvim-notify",
     opts = {
       render = "compact",
+      stages = "static",
+
+
     }
   },
+  { 'folke/which-key.nvim', opts = {} },
   {
     "akinsho/bufferline.nvim",
     event = "VeryLazy",

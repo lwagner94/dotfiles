@@ -10,6 +10,8 @@ local function map(mode, lhs, rhs, opts)
 	  vim.keymap.set(mode, lhs, rhs, opts)
   end
 end
+
+
 -- better up/down
 map("n", "j", "v:count == 0 ? 'gj' : 'j'", { expr = true, silent = true })
 map("n", "k", "v:count == 0 ? 'gk' : 'k'", { expr = true, silent = true })
@@ -43,3 +45,9 @@ map("n", "]b", "<cmd>Buff1erLineCycleNext<cr>", { desc = "Next buffer" })
 map({ "i", "n" }, "<esc>", "<cmd>noh<cr><esc>", { desc = "Escape and clear hlsearch" })
 
 map({ "n", "x" }, "gw", "*N", { desc = "Search word under cursor" })
+
+-- Diagnostic keymaps
+map('n', '[d', vim.diagnostic.goto_prev, { desc = "Go to previous diagnostic message" })
+map('n', ']d', vim.diagnostic.goto_next, { desc = "Go to next diagnostic message" })
+map('n', '<leader>d', vim.diagnostic.open_float, { desc = "Open floating diagnostic message" })
+map('n', '<leader>q', vim.diagnostic.setloclist, { desc = "Open diagnostics list" })
