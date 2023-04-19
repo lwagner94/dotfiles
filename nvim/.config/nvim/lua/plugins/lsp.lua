@@ -4,7 +4,13 @@ local servers = {
   -- clangd = {},
   -- gopls = {},
   -- pyright = {},
-  rust_analyzer = {},
+  rust_analyzer = {
+    ["rust-analyzer"] = {
+      checkOnSave = {
+        command = "clippy"
+      }
+    }
+  },
   -- tsserver = {},
 
   lua_ls = {
@@ -79,6 +85,7 @@ return {
               server = {
                 on_attach = on_attach,
                 capabilities = capabilites,
+                settings = servers[server_name],
               }
             }
           else
